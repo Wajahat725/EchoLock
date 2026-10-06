@@ -2,7 +2,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-import psycopg2
+import psycopg
 import json
 import sys
 import os
@@ -36,14 +36,14 @@ app.add_middleware(
 # ---------------------------------------------------------
 DB_CONFIG = {
     "host": "ep-wispy-frog-b3c2j4wm-pooler.c-4.ap-southeast-1.aws.neon.tech",
-    "database": "echolock_db",
+    "dbname": "echolock_db",
     "user": "echolock_db_owner",
     "password": "npg_piR4VI0cnbZF",
     "sslmode": "require"
 }
 
 def get_db():
-    return psycopg2.connect(**DB_CONFIG)
+    return psycopg.connect(**DB_CONFIG)
 
 # ---------------------------------------------------------
 # Request Models
@@ -80,7 +80,7 @@ def register(req: RegisterRequest):
         conn.commit()
         return {"message": "User registered successfully!"}
 
-    except psycopg2.errors.UniqueViolation:
+    except psycopg.errors.UniqueViolation:
         conn.rollback()
         raise HTTPException(status_code=400, detail="Username already exists")
 
