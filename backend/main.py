@@ -36,10 +36,15 @@ app.add_middleware(
 # ---------------------------------------------------------
 DB_CONFIG = {
     "host": "ep-wispy-frog-b3c2j4wm-pooler.c-4.ap-southeast-1.aws.neon.tech",
-    "dbname": "echolock_db",
+    "database": "echolock_db",
     "user": "echolock_db_owner",
-    "password": "npg_piR4VI0cnbZF",
-    "sslmode": "require"
+    "password": "npg_Vt2JnobKhea3",
+    "sslmode": "require",
+    "connect_timeout": 10,           
+    "keepalives": 1,                
+    "keepalives_idle": 30,           
+    "keepalives_interval": 10,     
+    "keepalives_count": 5            
 }
 
 def get_db():
@@ -106,6 +111,7 @@ def login_start(username: str):
 
         user_id = user[0]
 
+        # Lockout check
         cur.execute(
             "SELECT failed_attempts, lock_until FROM users WHERE id = %s",
             (user_id,)
@@ -116,7 +122,14 @@ def login_start(username: str):
         if lock_status["locked"]:
             raise HTTPException(status_code=403, detail=lock_status["message"])
 
-        grid = generate_grid(5)
+        # ✅ User ke secret chars nikalo
+        cur.execute("SELECT encrypted_secret FROM users WHERE id = %s", (user_id,))
+        encrypted_secret = cur.fetchone()[0]
+        secret_chars = decrypt_secret(encrypted_secret).split(",")
+        # secret_chars = ['M', 'N', 'O']
+
+        # ✅ Grid banao — secret chars include karke
+        grid = generate_grid(5, required_chars=secret_chars)
 
         cur.execute(
             "INSERT INTO sessions (user_id, grid_data) VALUES (%s, %s) RETURNING id",
@@ -134,7 +147,6 @@ def login_start(username: str):
     finally:
         cur.close()
         conn.close()
-
 
 # ---------- 3. Login Verify ----------
 @app.post("/login/verify")
@@ -162,7 +174,7 @@ def login_verify(req: VerifyRequest):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        grid = json.loads(session[0])
+        grid = (session[0])
 
         try:
             clicked_chars = [grid[r][c] for r, c in req.positions]

@@ -7,9 +7,9 @@ const RegisterPage = () => (
   <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-4 py-12">
     <Card title="Create account" subtitle="Set your username and three secret characters.">
       <RegisterForm />
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-slate-500">
         Already registered?{' '}
-        <Link to={ROUTES.LOGIN} className="text-cyan-accent hover:underline">
+        <Link to={ROUTES.LOGIN} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
           Sign in
         </Link>
       </p>
@@ -18,3 +18,4 @@ const RegisterPage = () => (
 );
 
 export default RegisterPage;
+

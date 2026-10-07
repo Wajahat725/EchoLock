@@ -11,66 +11,49 @@ const DashboardPage = () => {
   const { user, isAuthenticated } = useAuth();
   const [history, setHistory] = useState([]);
   const [leakage, setLeakage] = useState(null);
-  const [loadingHistory, setLoadingHistory] = useState(true);
-  const [loadingLeakage, setLoadingLeakage] = useState(true);
-  const [historyError, setHistoryError] = useState('');
-  const [leakageError, setLeakageError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!user?.username) return;
+    let mounted = true;
+    setLoading(true);
 
-    const load = async () => {
-      setLoadingHistory(true);
-      setHistoryError('');
-      try {
-        const { data } = await getLoginHistory(user.username);
-        setHistory(Array.isArray(data) ? data : data?.history ?? []);
-      } catch (err) {
-        setHistoryError(err.message);
-        setHistory([]);
-      } finally {
-        setLoadingHistory(false);
+    Promise.allSettled([
+      getLoginHistory(user.username),
+      getLeakageReport(user.username),
+    ]).then(([histRes, leakRes]) => {
+      if (!mounted) return;
+      if (histRes.status === 'fulfilled') {
+        const d = histRes.value.data;
+        setHistory(Array.isArray(d) ? d : d?.history ?? []);
+      } else {
+        setErrors((prev) => ({ ...prev, history: histRes.reason?.message }));
       }
-    };
+      if (leakRes.status === 'fulfilled') {
+        setLeakage(leakRes.value.data);
+      } else {
+        setErrors((prev) => ({ ...prev, leakage: leakRes.reason?.message }));
+      }
+      setLoading(false);
+    });
 
-    load();
+    return () => { mounted = false; };
   }, [user?.username]);
 
-  useEffect(() => {
-    if (!user?.username) return;
-
-    const load = async () => {
-      setLoadingLeakage(true);
-      setLeakageError('');
-      try {
-        const { data } = await getLeakageReport(user.username);
-        setLeakage(data);
-      } catch (err) {
-        setLeakageError(err.message);
-        setLeakage(null);
-      } finally {
-        setLoadingLeakage(false);
-      }
-    };
-
-    load();
-  }, [user?.username]);
-
-  if (!isAuthenticated) {
-    return <Navigate to={ROUTES.LOGIN} replace />;
-  }
+  if (!isAuthenticated) return <Navigate to={ROUTES.LOGIN} replace />;
 
   return (
-    <div className="mx-auto max-w-4xl flex-1 px-4 py-12 sm:px-6">
+    <div className="mx-auto max-w-5xl flex-1 px-4 py-10 sm:px-6">
       <header className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-100">Dashboard</h1>
-        <p className="mt-1 text-gray-400">
-          Welcome, <span className="text-cyan-accent">{user.username}</span>
+        <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Dashboard</h1>
+        <p className="mt-1 text-slate-600">
+          Welcome back, <span className="font-semibold text-indigo-600">{user.username}</span>
         </p>
         {user.sessionPassword && (
-          <p className="mt-2 text-sm text-gray-500">
+          <p className="mt-2 text-sm text-slate-600">
             Latest session key:{' '}
-            <code className="rounded bg-navy-light px-2 py-0.5 text-success">
+            <code className="rounded-md border border-slate-200 bg-white px-2.5 py-1 font-mono font-semibold text-indigo-700 shadow-xs">
               {user.sessionPassword}
             </code>
           </p>
@@ -79,42 +62,34 @@ const DashboardPage = () => {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Login history" subtitle="Recent authentication events">
-          {loadingHistory ? (
+          {loading ? (
             <Loader size="sm" label="Loading history..." />
-          ) : historyError ? (
-            <p className="text-sm text-gray-500">
-              History unavailable ({historyError}). Connect the backend dashboard endpoints.
-            </p>
+          ) : errors.history ? (
+            <p className="text-sm text-slate-500">History unavailable ({errors.history}).</p>
           ) : history.length === 0 ? (
-            <p className="text-sm text-gray-500">No login events recorded yet.</p>
+            <p className="text-sm text-slate-500">No login events recorded yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
-                  <tr className="border-b border-gray-800 text-gray-500">
-                    <th className="pb-2 pr-4 font-medium">Time</th>
-                    <th className="pb-2 pr-4 font-medium">Status</th>
-                    <th className="pb-2 font-medium">IP</th>
+                  <tr className="border-b border-slate-200 text-slate-500 font-semibold">
+                    <th className="pb-3 pr-4">Time</th>
+                    <th className="pb-3 pr-4">Status</th>
+                    <th className="pb-3">IP</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {history.map((row, i) => (
-                    <tr key={row.id ?? i} className="border-b border-gray-800/50">
-                      <td className="py-2 pr-4 text-gray-300">
-                        {row.timestamp || row.created_at || '—'}
-                      </td>
-                      <td className="py-2 pr-4">
-                        <span
-                          className={
-                            row.success || row.status === 'success'
-                              ? 'text-success'
-                              : 'text-danger'
-                          }
-                        >
+                    <tr key={row.id ?? i} className="hover:bg-slate-50/70 transition-colors">
+                      <td className="py-2.5 pr-4 text-slate-700 font-medium">{row.timestamp || row.created_at || '—'}</td>
+                      <td className="py-2.5 pr-4">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          row.success || row.status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        }`}>
                           {row.success || row.status === 'success' ? 'Success' : 'Failed'}
                         </span>
                       </td>
-                      <td className="py-2 text-gray-400">{row.ip || row.ip_address || '—'}</td>
+                      <td className="py-2.5 text-slate-500 font-mono text-xs">{row.ip || row.ip_address || '—'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -124,11 +99,7 @@ const DashboardPage = () => {
         </Card>
 
         <Card title="AI leakage analysis" subtitle="Cross-session pattern monitoring">
-          <LeakageReport
-            report={leakage}
-            loading={loadingLeakage}
-            error={leakageError}
-          />
+          <LeakageReport report={leakage} loading={loading} error={errors.leakage} />
         </Card>
       </div>
     </div>
@@ -136,3 +107,5 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
+
+

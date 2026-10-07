@@ -10,9 +10,9 @@ const LoginPage = () => (
       subtitle="Step 1: username · Step 2: click your secret pattern on the grid"
     >
       <LoginForm />
-      <p className="mt-6 text-center text-sm text-gray-500">
+      <p className="mt-6 text-center text-sm text-slate-500">
         New to EchoLock?{' '}
-        <Link to={ROUTES.REGISTER} className="text-cyan-accent hover:underline">
+        <Link to={ROUTES.REGISTER} className="font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
           Register
         </Link>
       </p>
@@ -21,3 +21,4 @@ const LoginPage = () => (
 );
 
 export default LoginPage;
+

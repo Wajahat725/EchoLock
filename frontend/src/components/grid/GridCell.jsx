@@ -1,28 +1,16 @@
-/**
- * @param {object} props
- * @param {string} props.char
- * @param {number} props.row
- * @param {number} props.col
- * @param {boolean} props.isSelected
- * @param {number|null} props.order
- * @param {(row: number, col: number) => void} props.onClick
- */
 const GridCell = ({ char, row, col, isSelected, order, onClick }) => (
   <button
     type="button"
     onClick={() => onClick(row, col)}
-    className={`relative aspect-square w-full rounded-lg border-2 text-lg font-semibold transition-all duration-200 sm:text-xl ${
+    className={`relative aspect-square w-full rounded-xl border-2 text-lg font-bold transition-all sm:text-xl ${
       isSelected
-        ? 'border-cyan-accent bg-cyan-accent/20 text-cyan-accent shadow-glow scale-[0.98]'
-        : 'border-gray-700 bg-navy-lighter text-gray-200 hover:border-cyan-accent/60 hover:bg-navy-light'
-    }`}
-    aria-label={`Cell ${row + 1}, ${col + 1}, character ${char}${
-      order ? `, selected order ${order}` : ''
+        ? 'border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-500/25 scale-[0.97]'
+        : 'border-slate-200 bg-white text-slate-800 shadow-sm hover:border-indigo-500 hover:bg-indigo-50/60 hover:text-indigo-700 active:scale-95'
     }`}
   >
     {char}
     {isSelected && order != null && (
-      <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-cyan-accent text-xs font-bold text-navy">
+      <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-xs font-bold text-slate-900 ring-2 ring-white shadow-sm">
         {order}
       </span>
     )}
@@ -30,3 +18,5 @@ const GridCell = ({ char, row, col, isSelected, order, onClick }) => (
 );
 
 export default GridCell;
+
+

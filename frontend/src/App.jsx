@@ -25,7 +25,7 @@ const App = () => (
       <Toaster
         position="top-right"
         toastOptions={{
-          className: '!bg-navy-light !text-gray-100 !border !border-gray-700',
+          className: '!bg-white !text-slate-800 !border !border-slate-200 !shadow-lg !font-medium !text-sm',
           duration: 4000,
         }}
       />
