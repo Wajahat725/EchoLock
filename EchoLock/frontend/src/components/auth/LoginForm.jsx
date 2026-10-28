@@ -17,10 +17,7 @@ import { validateUsername } from '../../utils/validators';
 const GridSkeleton = () => (
   <div className="mx-auto grid max-w-md grid-cols-5 gap-2 sm:gap-3">
     {Array.from({ length: 25 }).map((_, i) => (
-      <div
-        key={i}
-        className="aspect-square animate-pulse rounded-lg bg-navy-lighter"
-      />
+      <div key={i} className="aspect-square animate-pulse rounded-xl bg-slate-200" />
     ))}
   </div>
 );
@@ -46,69 +43,46 @@ const LoginForm = () => {
     resetSelections();
   }, [gridKey, resetSelections]);
 
-  const verifySession = useCallback(
-    async (positions) => {
-      setLoadingVerify(true);
-      setStatusMessage(null);
-      try {
-        const { data } = await verifyLogin({
-          session_id: sessionId,
-          positions,
-        });
-
-        if (data.locked || data.status === 'locked') {
-          setLockedUntil(data.locked_until || data.lockout_until);
-          setStatusMessage({
-            variant: 'error',
-            text: 'Account locked due to failed attempts.',
-          });
-          toast.error('Account locked');
-          return;
-        }
-
-        if (data.success || data.status === 'success') {
-          const password =
-            data.session_password ||
-            positions.map((p) => `${p.row},${p.col}`).join('|');
-          setSessionPassword(password);
-          login({ username: username.trim(), sessionPassword: password });
-          setStatusMessage({ variant: 'success', text: 'Authentication successful.' });
-          toast.success('Welcome back!');
-          setTimeout(() => navigate(ROUTES.DASHBOARD), 1500);
-          return;
-        }
-
-        setStatusMessage({
-          variant: 'error',
-          text: data.message || 'Authentication failed.',
-        });
-        toast.error('Invalid selection — try again');
-        setGridKey((k) => k + 1);
-      } catch (err) {
-        const msg = err.message || 'Verification failed';
-        if (msg.toLowerCase().includes('lock')) {
-          setLockedUntil(new Date(Date.now() + 15 * 60 * 1000).toISOString());
-        }
-        setStatusMessage({ variant: 'error', text: msg });
-        toast.error(msg);
-        setGridKey((k) => k + 1);
-      } finally {
-        setLoadingVerify(false);
+  const verifySession = useCallback(async (positions) => {
+    setLoadingVerify(true);
+    setStatusMessage(null);
+    try {
+      const { data } = await verifyLogin({ username: username.trim(), session_id: sessionId, positions });
+      if (data.locked || data.status === 'locked') {
+        setLockedUntil(data.locked_until || data.lockout_until);
+        setStatusMessage({ variant: 'error', text: 'Account locked due to failed attempts.' });
+        toast.error('Account locked');
+        return;
       }
-    },
-    [sessionId, username, login, navigate]
-  );
+      if (data.success || data.status === 'success') {
+        const password = data.session_password || positions.map((p) => `${p.row},${p.col}`).join('|');
+        setSessionPassword(password);
+        login({ username: username.trim(), sessionPassword: password });
+        setStatusMessage({ variant: 'success', text: 'Authentication successful.' });
+        toast.success('Welcome back!');
+        setTimeout(() => navigate(ROUTES.DASHBOARD), 1500);
+        return;
+      }
+      setStatusMessage({ variant: 'error', text: data.message || 'Authentication failed.' });
+      toast.error('Invalid selection — try again');
+      setGridKey((k) => k + 1);
+    } catch (err) {
+      const msg = err.message || 'Verification failed';
+      if (msg.toLowerCase().includes('lock')) {
+        setLockedUntil(new Date(Date.now() + 15 * 60 * 1000).toISOString());
+      }
+      setStatusMessage({ variant: 'error', text: msg });
+      toast.error(msg);
+      setGridKey((k) => k + 1);
+    } finally {
+      setLoadingVerify(false);
+    }
+  }, [sessionId, username, login, navigate]);
 
   useEffect(() => {
     if (!isComplete || loadingVerify || sessionPassword) return;
-    const positions = selections.map(({ row, col }) => ({ row, col }));
-    verifySession(positions);
+    verifySession(selections.map(({ row, col }) => ({ row, col })));
   }, [isComplete, selections, loadingVerify, sessionPassword, verifySession]);
-
-  const onCellClick = (row, col) => {
-    if (loadingVerify || isComplete || sessionPassword) return;
-    handleCellClick(row, col, grid);
-  };
 
   const handleStartLogin = async (e) => {
     e.preventDefault();
@@ -157,10 +131,8 @@ const LoginForm = () => {
 
   if (step === 1) {
     return (
-      <form onSubmit={handleStartLogin} className="space-y-5">
-        {statusMessage && (
-          <Alert variant={statusMessage.variant}>{statusMessage.text}</Alert>
-        )}
+      <form onSubmit={handleStartLogin} className="space-y-4">
+        {statusMessage && <Alert variant={statusMessage.variant}>{statusMessage.text}</Alert>}
         <Input
           label="Username"
           name="username"
@@ -177,17 +149,15 @@ const LoginForm = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {statusMessage && (
-        <Alert variant={statusMessage.variant}>{statusMessage.text}</Alert>
-      )}
+    <div className="space-y-5">
+      {statusMessage && <Alert variant={statusMessage.variant}>{statusMessage.text}</Alert>}
 
       {sessionPassword && (
         <Alert variant="success">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <span>
               One-time session password:{' '}
-              <code className="rounded bg-navy px-2 py-0.5 text-success">{sessionPassword}</code>
+              <code className="rounded-md bg-white border border-emerald-300 px-2.5 py-1 text-emerald-800 font-mono font-bold">{sessionPassword}</code>
             </span>
             <Button size="sm" variant="secondary" onClick={copySessionPassword}>
               Copy
@@ -196,8 +166,8 @@ const LoginForm = () => {
         </Alert>
       )}
 
-      <p className="text-center text-sm text-gray-400">
-        Signed in as <span className="text-cyan-accent">{username}</span>
+      <p className="text-center text-sm text-slate-600">
+        Signed in as <span className="font-semibold text-indigo-600">{username}</span>
       </p>
 
       {loadingStart ? (
@@ -207,7 +177,7 @@ const LoginForm = () => {
           key={gridKey}
           grid={grid}
           selections={selections}
-          onCellClick={onCellClick}
+          onCellClick={(r, c) => !loadingVerify && !isComplete && !sessionPassword && handleCellClick(r, c, grid)}
           disabled={loadingVerify || !!sessionPassword}
         />
       ) : (
@@ -215,19 +185,13 @@ const LoginForm = () => {
       )}
 
       <SelectedPositions selections={selections} />
-
       {loadingVerify && <Loader size="sm" label="Verifying..." />}
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex gap-2">
         <Button
           variant="secondary"
           className="flex-1"
-          onClick={() => {
-            setStep(1);
-            setGrid(null);
-            resetSelections();
-            setStatusMessage(null);
-          }}
+          onClick={() => { setStep(1); setGrid(null); resetSelections(); setStatusMessage(null); }}
           disabled={loadingVerify}
         >
           Change user
@@ -246,3 +210,4 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
+

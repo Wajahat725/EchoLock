@@ -1,15 +1,3 @@
-/**
- * @param {object} props
- * @param {string} [props.label]
- * @param {string} [props.type]
- * @param {string} props.value
- * @param {(e: React.ChangeEvent<HTMLInputElement>) => void} props.onChange
- * @param {string} [props.error]
- * @param {string} [props.placeholder]
- * @param {string} [props.name]
- * @param {string} [props.id]
- * @param {boolean} [props.disabled]
- */
 const Input = ({
   label,
   type = 'text',
@@ -26,10 +14,7 @@ const Input = ({
   return (
     <div className="w-full">
       {label && (
-        <label
-          htmlFor={inputId}
-          className="mb-1.5 block text-sm font-medium text-gray-300"
-        >
+        <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-slate-700">
           {label}
         </label>
       )}
@@ -41,19 +26,15 @@ const Input = ({
         onChange={onChange}
         placeholder={placeholder}
         disabled={disabled}
-        className={`w-full rounded-lg border bg-navy-light px-4 py-2.5 text-gray-100 placeholder-gray-500 transition-colors duration-200 focus:border-cyan-accent focus:outline-none focus:ring-1 focus:ring-cyan-accent disabled:opacity-60 ${
-          error ? 'border-danger' : 'border-gray-700'
+        className={`w-full rounded-lg border bg-white px-3.5 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm transition-colors focus:outline-none focus:ring-2 disabled:bg-slate-100 disabled:opacity-60 ${
+          error ? 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/20' : 'border-slate-300 focus:border-indigo-600 focus:ring-indigo-500/20'
         }`}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${inputId}-error` : undefined}
       />
-      {error && (
-        <p id={`${inputId}-error`} className="mt-1.5 text-sm text-danger" role="alert">
-          {error}
-        </p>
-      )}
+      {error && <p className="mt-1 text-xs font-medium text-rose-600">{error}</p>}
     </div>
   );
 };
 
 export default Input;
+
+

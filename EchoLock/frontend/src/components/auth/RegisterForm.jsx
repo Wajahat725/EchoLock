@@ -19,38 +19,28 @@ const RegisterForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setApiError('');
-
     const usernameError = validateUsername(username);
     const { chars, error: secretError } = parseSecretChars(secretChars);
-    const nextErrors = {
-      username: usernameError,
-      secretChars: secretError,
-    };
-    setErrors(nextErrors);
-
+    setErrors({ username: usernameError, secretChars: secretError });
     if (usernameError || secretError) return;
 
     setLoading(true);
     try {
-      await registerUser({
-        username,
-        secretChars: chars.join(','),
-      });
+      await registerUser({ username, secretChars: chars.join(',') });
       toast.success('Account created! You can sign in now.');
       navigate(ROUTES.LOGIN);
     } catch (err) {
-      const message = err.message || 'Registration failed';
-      setApiError(message);
-      toast.error(message);
+      const msg = err.message || 'Registration failed';
+      setApiError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       {apiError && <Alert variant="error">{apiError}</Alert>}
-
       <Input
         label="Username"
         name="username"
@@ -59,7 +49,6 @@ const RegisterForm = () => {
         placeholder="Choose a username"
         error={errors.username}
       />
-
       <Input
         label="Secret characters"
         name="secretChars"
@@ -68,11 +57,9 @@ const RegisterForm = () => {
         placeholder="A, B, C"
         error={errors.secretChars}
       />
-      <p className="-mt-3 text-xs text-gray-500">
-        Register exactly 3 secret characters. At login you will click their positions on a
-        random grid — not the characters themselves in plain view elsewhere.
+      <p className="-mt-2 text-xs text-slate-500 leading-relaxed">
+        Register 3 secret characters. At login you will click their positions on a dynamic grid.
       </p>
-
       <Button type="submit" className="w-full" loading={loading}>
         Create account
       </Button>
@@ -81,3 +68,4 @@ const RegisterForm = () => {
 };
 
 export default RegisterForm;
+
