@@ -116,64 +116,80 @@ def dashboard_leakage(username: str):
     cur = conn.cursor()
     try:
         cur.execute(
-            """SELECT a.selected_chars
+            """SELECT a.positions
             FROM login_attempts AS a
             JOIN users AS u ON u.id = a.user_id
-            WHERE u.username = %s AND a.success = FALSE
+            WHERE u.username = %s AND a.success = TRUE
             ORDER BY a.created_at DESC
-            LIMIT 100""",
+            LIMIT 5""",
             (username,)
         )
-        failed_attempts = cur.fetchall()
+        recent_sessions = cur.fetchall()
     finally:
         cur.close()
         conn.close()
 
-    if len(failed_attempts) < 3:
+    if len(recent_sessions) < 3:
         return {
-            "status": "insufficient_data",
-            "message": "Complete a few login sessions before leakage patterns can be analyzed.",
+            "status": "safe",
+            "message": (
+                f"Not enough data. You have {len(recent_sessions)} successful "
+                "logins. Need at least 3."
+            ),
         }
 
-    observations_by_rank = {}
-    for (selected_chars,) in failed_attempts:
-        chars = selected_chars.split(",") if selected_chars else []
-        for rank, char in enumerate(chars[:REQUIRED_SECRET_CHARS], start=1):
-            char = char.strip()
-            if char:
-                observations_by_rank.setdefault(rank, {}).setdefault(char, 0)
-                observations_by_rank[rank][char] += 1
+    pattern_counts = {}
+    for (positions,) in recent_sessions:
+        if isinstance(positions, str):
+            positions = json.loads(positions)
+        if not isinstance(positions, list) or len(positions) != REQUIRED_SECRET_CHARS:
+            continue
 
-    prediction_count = 0
-    predicted_secret_count = 0
-    patterns = []
-    for rank, counts_by_char in observations_by_rank.items():
-        total_observations = sum(counts_by_char.values())
-        for count in counts_by_char.values():
-            prediction_count += 1
-            if check_leakage(
-                rank,
-                REQUIRED_SECRET_CHARS,
-                count,
-                total_observations,
-                count / total_observations,
-            ):
-                predicted_secret_count += 1
-                patterns.append(f"Repeated character patterns at click {rank}")
+        normalized_positions = []
+        for position in positions:
+            if isinstance(position, dict):
+                row, col = position.get("row"), position.get("col")
+            elif isinstance(position, (list, tuple)) and len(position) == 2:
+                row, col = position
+            else:
+                normalized_positions = []
+                break
 
-    score = round(predicted_secret_count / prediction_count * 100) if prediction_count else 0
-    status = "leakage" if score >= 50 else "warning" if score else "safe"
-    messages = {
-        "leakage": "Repeated failed-login patterns may reveal secret characters.",
-        "warning": "Some failed-login patterns may be predictable.",
-        "safe": "No predictable patterns were detected in failed login attempts.",
-    }
+            if type(row) is not int or type(col) is not int:
+                normalized_positions = []
+                break
+            normalized_positions.append([row, col])
+
+        if normalized_positions:
+            pattern = json.dumps(normalized_positions, separators=(",", ":"))
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+
+    valid_sessions = sum(pattern_counts.values())
+    most_common_pattern_count = max(pattern_counts.values(), default=0)
+    frequency = most_common_pattern_count / valid_sessions if valid_sessions else 0
+    predicted_leakage = (
+        frequency >= 0.8
+        and check_leakage(
+            1,
+            REQUIRED_SECRET_CHARS,
+            most_common_pattern_count,
+            valid_sessions,
+            frequency,
+        )
+    )
+    risk_score = 100 if predicted_leakage else 0
+    status = "leakage" if risk_score == 100 else "safe"
     return {
         "status": status,
-        "message": messages[status],
-        "score": score,
-        "patterns": list(dict.fromkeys(patterns)),
-        "attempts_analyzed": len(failed_attempts),
+        "message": (
+            "Repeated login position patterns may reveal predictable behavior."
+            if predicted_leakage
+            else "No obvious leakage detected."
+        ),
+        "risk_score": risk_score,
+        "score": risk_score,
+        "patterns": ["Repeated login position sequence"] if predicted_leakage else [],
+        "attempts_analyzed": len(recent_sessions),
     }
 
 # ---------- 1. Register ----------
