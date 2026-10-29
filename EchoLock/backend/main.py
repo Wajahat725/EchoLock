@@ -29,14 +29,14 @@ app = FastAPI(title="EchoLock API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000"],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=["*"],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?", 
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------------------------------------------------------
-# Database Config — Neon Cloud PostgreSQL
+# Database Config - Neon Cloud PostgreSQL
 # ---------------------------------------------------------
 DB_CONFIG = {
     "host": "ep-wispy-frog-b3c2j4wm-pooler.c-4.ap-southeast-1.aws.neon.tech",
@@ -57,6 +57,11 @@ def get_db():
     return psycopg.connect(**DB_CONFIG, password=password)
 
 # ---------------------------------------------------------
+# Secret length limits - Strictly 8 Characters
+# ---------------------------------------------------------
+REQUIRED_SECRET_CHARS = 8
+
+# ---------------------------------------------------------
 # Request Models
 # ---------------------------------------------------------
 class RegisterRequest(BaseModel):
@@ -68,10 +73,6 @@ class VerifyRequest(BaseModel):
     session_id: int
     positions: list
 
-class AIAnalyzeRequest(BaseModel):
-    username: str
-    secret_length: int = 6  # Default to 6, or get from DB
-
 # ---------------------------------------------------------
 # Routes
 # ---------------------------------------------------------
@@ -80,10 +81,116 @@ class AIAnalyzeRequest(BaseModel):
 def root():
     return {"message": "EchoLock API is running!"}
 
+# ---------- Dashboard ----------
+@app.get("/dashboard/history")
+def dashboard_history(username: str):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT a.id, a.created_at, a.success
+            FROM login_attempts AS a
+            JOIN users AS u ON u.id = a.user_id
+            WHERE u.username = %s
+            ORDER BY a.created_at DESC
+            LIMIT 50""",
+            (username,)
+        )
+        history = [
+            {
+                "id": attempt_id,
+                "timestamp": created_at.isoformat() if created_at else None,
+                "success": success,
+            }
+            for attempt_id, created_at, success in cur.fetchall()
+        ]
+        return {"history": history}
+    finally:
+        cur.close()
+        conn.close()
+
+
+@app.get("/dashboard/leakage")
+def dashboard_leakage(username: str):
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """SELECT a.selected_chars
+            FROM login_attempts AS a
+            JOIN users AS u ON u.id = a.user_id
+            WHERE u.username = %s AND a.success = FALSE
+            ORDER BY a.created_at DESC
+            LIMIT 100""",
+            (username,)
+        )
+        failed_attempts = cur.fetchall()
+    finally:
+        cur.close()
+        conn.close()
+
+    if len(failed_attempts) < 3:
+        return {
+            "status": "insufficient_data",
+            "message": "Complete a few login sessions before leakage patterns can be analyzed.",
+        }
+
+    observations_by_rank = {}
+    for (selected_chars,) in failed_attempts:
+        chars = selected_chars.split(",") if selected_chars else []
+        for rank, char in enumerate(chars[:REQUIRED_SECRET_CHARS], start=1):
+            char = char.strip()
+            if char:
+                observations_by_rank.setdefault(rank, {}).setdefault(char, 0)
+                observations_by_rank[rank][char] += 1
+
+    prediction_count = 0
+    predicted_secret_count = 0
+    patterns = []
+    for rank, counts_by_char in observations_by_rank.items():
+        total_observations = sum(counts_by_char.values())
+        for count in counts_by_char.values():
+            prediction_count += 1
+            if check_leakage(
+                rank,
+                REQUIRED_SECRET_CHARS,
+                count,
+                total_observations,
+                count / total_observations,
+            ):
+                predicted_secret_count += 1
+                patterns.append(f"Repeated character patterns at click {rank}")
+
+    score = round(predicted_secret_count / prediction_count * 100) if prediction_count else 0
+    status = "leakage" if score >= 50 else "warning" if score else "safe"
+    messages = {
+        "leakage": "Repeated failed-login patterns may reveal secret characters.",
+        "warning": "Some failed-login patterns may be predictable.",
+        "safe": "No predictable patterns were detected in failed login attempts.",
+    }
+    return {
+        "status": status,
+        "message": messages[status],
+        "score": score,
+        "patterns": list(dict.fromkeys(patterns)),
+        "attempts_analyzed": len(failed_attempts),
+    }
 
 # ---------- 1. Register ----------
 @app.post("/register")
 def register(req: RegisterRequest):
+    parts = [p.strip() for p in req.secret_chars.split(",") if p.strip()]
+    
+    if len(parts) != REQUIRED_SECRET_CHARS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Secret must have exactly {REQUIRED_SECRET_CHARS} characters"
+        )
+    if any(len(p) != 1 for p in parts):
+        raise HTTPException(status_code=400, detail="Each secret must be a single character")
+    if len(set(p.upper() for p in parts)) != len(parts):
+        raise HTTPException(status_code=400, detail="Secret characters must be unique")
+
     conn = get_db()
     cur = conn.cursor()
     try:
@@ -120,7 +227,6 @@ def login_start(username: str):
 
         user_id = user[0]
 
-        # Lockout check
         cur.execute(
             "SELECT failed_attempts, lock_until FROM users WHERE id = %s",
             (user_id,)
@@ -131,14 +237,10 @@ def login_start(username: str):
         if lock_status["locked"]:
             raise HTTPException(status_code=403, detail=lock_status["message"])
 
-        # ✅ User ke secret chars nikalo
         cur.execute("SELECT encrypted_secret FROM users WHERE id = %s", (user_id,))
         encrypted_secret = cur.fetchone()[0]
         secret_chars = decrypt_secret(encrypted_secret).split(",")
-        # secret_chars = ['M', 'N', 'O']
-        print(f"DEBUG: decrypted secret_chars for '{username}' = {secret_chars}")
 
-        # ✅ Grid banao — secret chars include karke
         grid = generate_grid(5, required_chars=secret_chars)
 
         cur.execute(
@@ -151,6 +253,7 @@ def login_start(username: str):
         return {
             "grid": grid,
             "session_id": session_id,
+            "secret_length": len(secret_chars),
             "message": "Grid generated. Click your secret characters in order."
         }
 
@@ -165,14 +268,17 @@ def login_verify(req: VerifyRequest):
     cur = conn.cursor()
     try:
         cur.execute(
-            "SELECT id, encrypted_secret, failed_attempts FROM users WHERE username = %s",
+            "SELECT id, encrypted_secret, failed_attempts, lock_until FROM users WHERE username = %s",
             (req.username,)
         )
         user = cur.fetchone()
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        user_id, encrypted_secret, failed_attempts = user
+        user_id, encrypted_secret, failed_attempts, lock_until = user
+        lock_status = check_lockout(failed_attempts, lock_until)
+        if lock_status["locked"]:
+            raise HTTPException(status_code=403, detail=lock_status["message"])
 
         try:
             secret_chars = decrypt_secret(encrypted_secret).split(",")
@@ -187,42 +293,31 @@ def login_verify(req: VerifyRequest):
         if not session:
             raise HTTPException(status_code=404, detail="Session not found")
 
-        # grid_data can come back from the DB as a JSON string or parsed list
         grid = session[0]
         if isinstance(grid, str):
             grid = json.loads(grid)
 
         try:
-            # Extract positions from frontend (handles both dict and list formats)
             positions = []
             for pos in req.positions:
                 if isinstance(pos, dict):
-                    # Agar frontend object bhej raha hai {"row": 2, "col": 2}
                     positions.append((pos.get("row"), pos.get("col")))
                 elif isinstance(pos, (list, tuple)):
-                    # Agar frontend list bhej raha hai [2, 2]
                     positions.append((pos[0], pos[1]))
                 else:
                     raise HTTPException(status_code=400, detail="Invalid position format")
 
-            # Frontend 1-based index bhej raha hai (1,2,3), isliye -1 kar ke 0-based banayein
-            clicked_chars = [grid[r - 1][c - 1] for r, c in positions]
+            clicked_chars = [grid[r][c] for r, c in positions]
             
-            # 🛑 DEBUGGING PRINTS (Terminal mein check karein)
-            print("\n" + "="*50)
-            print(f"DEBUG -> FRONTEND SE POSITIONS AAYI: {req.positions}")
-            print(f"DEBUG -> CONVERTED POSITIONS: {positions}")
-            print(f"DEBUG -> CLICKED CHARS: {clicked_chars}")
-            print(f"DEBUG -> ACTUAL SECRET: {secret_chars}")
-            print("="*50 + "\n")
+            if len(clicked_chars) != len(secret_chars):
+                raise HTTPException(status_code=400, detail=f"Expected {len(secret_chars)} clicks, got {len(clicked_chars)}")
 
-        except (IndexError, TypeError) as e:
-            print(f"ERROR IN POSITIONS: {e}")
+        except (IndexError, TypeError):
             raise HTTPException(status_code=400, detail="Invalid positions")
 
         if clicked_chars == secret_chars:
             reset_attempts(cur, user_id)
-            session_pass = generate_session_password(req.positions, grid, user_id)
+            session_pass = generate_session_password(positions, grid, user_id)
 
             cur.execute(
                 """INSERT INTO login_attempts 
@@ -255,90 +350,6 @@ def login_verify(req: VerifyRequest):
                 "status": "failed",
                 "message": "Wrong positions! Try again.",
                 "lockout": lock_result
-            }
-
-    finally:
-        cur.close()
-        conn.close()
-
-# ---------------------------------------------------------
-# AI Leakage Analysis Endpoint
-# ---------------------------------------------------------
-@app.post("/ai/analyze")
-def analyze_leakage(req: AIAnalyzeRequest):
-    conn = get_db()
-    cur = conn.cursor()
-    try:
-        # 1. Get user_id
-        cur.execute("SELECT id FROM users WHERE username = %s", (req.username,))
-        user = cur.fetchone()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        user_id = user[0]
-
-        # 2. Get the last 5 successful sessions for this user
-        cur.execute("""
-            SELECT selected_chars 
-            FROM login_attempts 
-            WHERE user_id = %s AND success = TRUE 
-            ORDER BY created_at DESC 
-            LIMIT 5
-        """, (user_id,))
-        
-        recent_sessions = cur.fetchall()
-        
-        if len(recent_sessions) < 3:
-            return {"status": "safe", "message": "Not enough data for AI analysis (need at least 3 successful logins)."}
-
-        # 3. Prepare data for AI analysis
-        # We need to count how many times a character appeared at a specific rank
-        leakage_detected = False
-        
-        # Loop through each character position (rank 1 to secret_length)
-        for rank in range(1, req.secret_length + 1):
-            observed_chars = []
-            
-            # Extract the character at this rank from recent sessions
-            for session in recent_sessions:
-                chars = session[0].split(",")
-                if len(chars) >= rank:
-                    observed_chars.append(chars[rank - 1])
-            
-            total_obs = len(observed_chars)
-            if total_obs == 0:
-                continue
-                
-            # Count frequency of each character
-            for char in set(observed_chars):
-                count = observed_chars.count(char)
-                freq = count / total_obs
-                
-                # 4. Ask the AI Model
-                is_leak = check_leakage(
-                    click_rank=rank, 
-                    secret_length=req.secret_length, 
-                    count=count, 
-                    total_obs=total_obs, 
-                    freq=freq
-                )
-                
-                # If the AI model predicts 1 (it's the secret char) with high frequency
-                if is_leak and freq >= 0.6: 
-                    leakage_detected = True
-
-        # 5. Return result
-        if leakage_detected:
-            return {
-                "status": "warning",
-                "leakage_detected": True,
-                "message": "AI Alert: Potential pattern leakage detected over recent sessions!"
-            }
-        else:
-            return {
-                "status": "safe",
-                "leakage_detected": False,
-                "message": "AI Analysis complete. No obvious leakage detected."
             }
 
     finally:

@@ -54,11 +54,11 @@ const RegisterForm = () => {
         name="secretChars"
         value={secretChars}
         onChange={(e) => setSecretChars(e.target.value)}
-        placeholder="A, B, C"
+        placeholder="A, B, C, D, E, F, G, H"
         error={errors.secretChars}
       />
       <p className="-mt-2 text-xs text-slate-500 leading-relaxed">
-        Register 3 secret characters. At login you will click their positions on a dynamic grid.
+        Register 8 secret characters. At login you will click their positions on a dynamic grid.
       </p>
       <Button type="submit" className="w-full" loading={loading}>
         Create account

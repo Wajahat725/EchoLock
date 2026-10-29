@@ -1,9 +1,6 @@
-import { MIN_USERNAME_LENGTH, SECRET_CHAR_COUNT } from './constants';
+// frontend/src/utils/validations.js
+import { MIN_USERNAME_LENGTH, REQUIRED_SECRET_CHARS } from './constants';
 
-/**
- * @param {string} username
- * @returns {string|null}
- */
 export const validateUsername = (username) => {
   const trimmed = username?.trim() ?? '';
   if (!trimmed) return 'Username is required';
@@ -16,20 +13,16 @@ export const validateUsername = (username) => {
   return null;
 };
 
-/**
- * Parses comma-separated secret characters into an array.
- * @param {string} input
- * @returns {{ chars: string[]|null, error: string|null }}
- */
 export const parseSecretChars = (input) => {
   const raw = input?.trim() ?? '';
   if (!raw) return { chars: null, error: 'Secret characters are required' };
 
   const parts = raw.split(',').map((p) => p.trim()).filter(Boolean);
-  if (parts.length !== SECRET_CHAR_COUNT) {
+
+  if (parts.length !== REQUIRED_SECRET_CHARS) {
     return {
       chars: null,
-      error: `Enter exactly ${SECRET_CHAR_COUNT} characters, comma-separated (e.g. A, B, C)`,
+      error: `Enter exactly ${REQUIRED_SECRET_CHARS} characters, comma-separated`,
     };
   }
 
@@ -37,6 +30,11 @@ export const parseSecretChars = (input) => {
     if (part.length !== 1) {
       return { chars: null, error: 'Each secret must be a single character' };
     }
+  }
+
+  const unique = new Set(parts.map((p) => p.toUpperCase()));
+  if (unique.size !== parts.length) {
+    return { chars: null, error: 'Secret characters must be unique (no repeats)' };
   }
 
   return { chars: parts, error: null };

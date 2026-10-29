@@ -1,11 +1,10 @@
 # security_core/lockout.py
 from datetime import datetime, timedelta
 
-MAX_ATTEMPTS = 3
+MAX_ATTEMPTS = 5
 LOCK_MINUTES = 15
 
 def check_lockout(failed_attempts, lock_until):
-    """Check karo user locked hai ya nahi."""
     if lock_until and datetime.now() < lock_until:
         remaining = int((lock_until - datetime.now()).total_seconds() // 60)
         return {
@@ -16,7 +15,6 @@ def check_lockout(failed_attempts, lock_until):
     return {"locked": False}
 
 def record_failed_attempt(cur, user_id, current_attempts):
-    """Failed attempt record karo aur zaroorat par lock karo."""
     new_attempts = current_attempts + 1
 
     if new_attempts >= MAX_ATTEMPTS:
@@ -41,7 +39,6 @@ def record_failed_attempt(cur, user_id, current_attempts):
         }
 
 def reset_attempts(cur, user_id):
-    """Success par attempts reset karo."""
     cur.execute(
         "UPDATE users SET failed_attempts = 0, lock_until = NULL WHERE id = %s",
         (user_id,)

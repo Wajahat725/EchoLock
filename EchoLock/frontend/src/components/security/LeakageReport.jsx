@@ -6,6 +6,9 @@ const LeakageReport = ({ report, loading, error }) => {
   if (loading) return <Loader size="sm" label="Running AI leakage analysis..." />;
   if (error) return <Alert variant="warning">Could not load leakage report: {error}</Alert>;
   if (!report) return <p className="text-sm text-slate-500">No AI analysis available yet. Complete a few login sessions first.</p>;
+  if (report.status === 'insufficient_data') {
+    return <p className="text-sm text-slate-500">{report.message}</p>;
+  }
 
   const status = (report.status || LEAKAGE_STATUS.SAFE).toLowerCase();
   const meta = {
@@ -31,4 +34,3 @@ const LeakageReport = ({ report, loading, error }) => {
 };
 
 export default LeakageReport;
-

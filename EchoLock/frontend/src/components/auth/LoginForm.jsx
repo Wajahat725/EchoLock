@@ -48,6 +48,12 @@ const LoginForm = () => {
     setStatusMessage(null);
     try {
       const { data } = await verifyLogin({ username: username.trim(), session_id: sessionId, positions });
+      if (data.lockout?.locked) {
+        setLockedUntil(new Date(Date.now() + 15 * 60 * 1000).toISOString());
+        setStatusMessage({ variant: 'error', text: data.lockout.message || 'Account locked due to failed attempts.' });
+        toast.error(data.lockout.message || 'Account locked');
+        return;
+      }
       if (data.locked || data.status === 'locked') {
         setLockedUntil(data.locked_until || data.lockout_until);
         setStatusMessage({ variant: 'error', text: 'Account locked due to failed attempts.' });
@@ -210,4 +216,3 @@ const LoginForm = () => {
 };
 
 export default LoginForm;
-

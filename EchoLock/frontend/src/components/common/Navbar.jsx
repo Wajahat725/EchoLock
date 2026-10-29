@@ -3,7 +3,6 @@ import { Link, NavLink } from 'react-router-dom';
 import { ROUTES } from '../../utils/constants';
 import { useAuth } from '../../hooks/useAuth';
 import Button from './Button';
-import logo from '../../assets/logo.svg';
 
 const navLinkClass = ({ isActive }) =>
   `inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm font-medium transition-all duration-150 ${
@@ -27,19 +26,22 @@ const Navbar = () => {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+      <div className="mx-auto flex h-[4.5rem] max-w-6xl items-center justify-between px-4 sm:px-6">
         
         {/* Brand Logo & Security Badge */}
         <div className="flex items-center gap-3">
           <Link
             to={ROUTES.HOME}
             onClick={closeMenu}
-            className="flex items-center gap-2.5 group focus:outline-none"
+            className="group flex items-center gap-2.5 rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600 focus-visible:ring-offset-4"
           >
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 shadow-sm shadow-indigo-500/20 group-hover:scale-105 transition-transform">
-              <img src={logo} alt="EchoLock Logo" className="h-6 w-6" aria-hidden />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-slate-900">
+            <img
+              src="/echolock-mark.svg"
+              alt=""
+              aria-hidden="true"
+              className="h-9 w-9 rounded-xl shadow-sm shadow-indigo-950/15 transition-transform duration-200 group-hover:-rotate-3 group-hover:scale-105"
+            />
+            <span className="text-xl font-bold tracking-[-0.045em] text-indigo-950">
               Echo<span className="text-indigo-600">Lock</span>
             </span>
           </Link>
@@ -136,7 +138,7 @@ const Navbar = () => {
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="border-b border-slate-200 bg-white px-4 pt-2 pb-5 shadow-lg md:hidden animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="border-b border-slate-200 bg-cream-50 px-4 pt-2 pb-5 shadow-lg md:hidden animate-in fade-in slide-in-from-top-2 duration-150">
           <nav className="flex flex-col space-y-1">
             <NavLink to={ROUTES.HOME} onClick={closeMenu} className={mobileNavLinkClass}>
               Home
@@ -192,5 +194,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-
-
