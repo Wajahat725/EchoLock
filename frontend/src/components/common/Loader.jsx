@@ -7,7 +7,4 @@ const Loader = ({ size = 'md', label = 'Loading...' }) => {
     </div>
   );
 };
-
 export default Loader;
-
-

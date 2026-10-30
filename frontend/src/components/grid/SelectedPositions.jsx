@@ -19,7 +19,4 @@ const SelectedPositions = ({ selections }) => {
     </ul>
   );
 };
-
 export default SelectedPositions;
-
-

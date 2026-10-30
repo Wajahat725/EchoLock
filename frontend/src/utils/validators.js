@@ -1,4 +1,3 @@
-// frontend/src/utils/validations.js
 import { MIN_USERNAME_LENGTH, REQUIRED_SECRET_CHARS } from './constants';
 
 export const validateUsername = (username) => {

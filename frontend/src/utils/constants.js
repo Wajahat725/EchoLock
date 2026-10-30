@@ -1,5 +1,4 @@
 export const GRID_SIZE = 5;
-
 export const MIN_USERNAME_LENGTH = 3;
 export const REQUIRED_SECRET_CHARS = 8;
 

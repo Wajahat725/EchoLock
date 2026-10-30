@@ -1,24 +1,20 @@
-# security_core/grid_generator.py
 import secrets
 import string
 
-
 def generate_grid(size=5, required_chars=None):
     """
-    Random grid banao. Agar required_chars diye hain, to woh
-    zaroor grid mein include honge (random positions par).
-    
+    Generate a random grid. If required_chars are given, they
+    are always included in the grid (at random positions).
     Args:
-        size: Grid ka size (default 5x5)
-        required_chars: List of characters jo grid mein hone chahiye
-                        (jaise ['M', 'N', 'O'])
-    
+        size: Grid size (default 5x5)
+        required_chars: List of characters that must appear in the grid
+                        (e.g. ['M', 'N', 'O'])
     Returns:
         2D list (grid) of characters
     """
     chars = string.ascii_uppercase
 
-    # Step 1: Random grid banao
+    # Step 1: Generate a random grid
     grid = []
     for i in range(size):
         row = []
@@ -26,7 +22,7 @@ def generate_grid(size=5, required_chars=None):
             row.append(secrets.choice(chars))
         grid.append(row)
 
-    # Step 2: Agar required_chars diye hain, to unko grid mein daalo
+    # Step 2: If required_chars are given, place them in the grid
     if required_chars:
         total_cells = size * size
         positions = list(range(total_cells))

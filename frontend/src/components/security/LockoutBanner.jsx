@@ -32,6 +32,4 @@ const LockoutBanner = ({ lockedUntil }) => {
     </Alert>
   );
 };
-
 export default LockoutBanner;
-

@@ -24,6 +24,4 @@ const Grid = ({ grid, selections, onCellClick, disabled = false }) => {
     </div>
   );
 };
-
 export default Grid;
-

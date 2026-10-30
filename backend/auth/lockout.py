@@ -1,4 +1,3 @@
-# security_core/lockout.py
 from datetime import datetime, timedelta
 
 MAX_ATTEMPTS = 5

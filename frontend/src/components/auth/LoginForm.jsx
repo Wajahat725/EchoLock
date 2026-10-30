@@ -46,20 +46,24 @@ const LoginForm = () => {
   const verifySession = useCallback(async (positions) => {
     setLoadingVerify(true);
     setStatusMessage(null);
+
     try {
       const { data } = await verifyLogin({ username: username.trim(), session_id: sessionId, positions });
+
       if (data.lockout?.locked) {
         setLockedUntil(new Date(Date.now() + 15 * 60 * 1000).toISOString());
         setStatusMessage({ variant: 'error', text: data.lockout.message || 'Account locked due to failed attempts.' });
         toast.error(data.lockout.message || 'Account locked');
         return;
       }
+
       if (data.locked || data.status === 'locked') {
         setLockedUntil(data.locked_until || data.lockout_until);
         setStatusMessage({ variant: 'error', text: 'Account locked due to failed attempts.' });
         toast.error('Account locked');
         return;
       }
+
       if (data.success || data.status === 'success') {
         const password = data.session_password || positions.map((p) => `${p.row},${p.col}`).join('|');
         setSessionPassword(password);
@@ -69,14 +73,13 @@ const LoginForm = () => {
         setTimeout(() => navigate(ROUTES.DASHBOARD), 1500);
         return;
       }
+
       setStatusMessage({ variant: 'error', text: data.message || 'Authentication failed.' });
       toast.error('Invalid selection — try again');
       setGridKey((k) => k + 1);
     } catch (err) {
       const msg = err.message || 'Verification failed';
-      if (msg.toLowerCase().includes('lock')) {
-        setLockedUntil(new Date(Date.now() + 15 * 60 * 1000).toISOString());
-      }
+      if (msg.toLowerCase().includes('lock')) setLockedUntil(new Date(Date.now() + 15 * 60 * 1000).toISOString());
       setStatusMessage({ variant: 'error', text: msg });
       toast.error(msg);
       setGridKey((k) => k + 1);
@@ -99,6 +102,7 @@ const LoginForm = () => {
     setLoadingStart(true);
     setStatusMessage(null);
     setLockedUntil(null);
+
     try {
       const { data } = await startLogin(username);
       setGrid(data.grid);
@@ -128,9 +132,7 @@ const LoginForm = () => {
     return (
       <div className="space-y-4">
         <LockoutBanner lockedUntil={lockedUntil} />
-        <Button variant="secondary" className="w-full" onClick={() => setLockedUntil(null)}>
-          Back
-        </Button>
+        <Button variant="secondary" className="w-full" onClick={() => setLockedUntil(null)}>Back</Button>
       </div>
     );
   }
@@ -139,17 +141,8 @@ const LoginForm = () => {
     return (
       <form onSubmit={handleStartLogin} className="space-y-4">
         {statusMessage && <Alert variant={statusMessage.variant}>{statusMessage.text}</Alert>}
-        <Input
-          label="Username"
-          name="username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="Your username"
-          error={usernameError}
-        />
-        <Button type="submit" className="w-full" loading={loadingStart}>
-          Continue to grid
-        </Button>
+        <Input label="Username" name="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Your username" error={usernameError} />
+        <Button type="submit" className="w-full" loading={loadingStart}>Continue to grid</Button>
       </form>
     );
   }
@@ -165,9 +158,7 @@ const LoginForm = () => {
               One-time session password:{' '}
               <code className="rounded-md bg-white border border-emerald-300 px-2.5 py-1 text-emerald-800 font-mono font-bold">{sessionPassword}</code>
             </span>
-            <Button size="sm" variant="secondary" onClick={copySessionPassword}>
-              Copy
-            </Button>
+            <Button size="sm" variant="secondary" onClick={copySessionPassword}>Copy</Button>
           </div>
         </Alert>
       )}
@@ -179,13 +170,7 @@ const LoginForm = () => {
       {loadingStart ? (
         <Loader label="Loading grid..." />
       ) : grid ? (
-        <Grid
-          key={gridKey}
-          grid={grid}
-          selections={selections}
-          onCellClick={(r, c) => !loadingVerify && !isComplete && !sessionPassword && handleCellClick(r, c, grid)}
-          disabled={loadingVerify || !!sessionPassword}
-        />
+        <Grid key={gridKey} grid={grid} selections={selections} onCellClick={(r, c) => !loadingVerify && !isComplete && !sessionPassword && handleCellClick(r, c, grid)} disabled={loadingVerify || !!sessionPassword} />
       ) : (
         <GridSkeleton />
       )}
@@ -194,22 +179,8 @@ const LoginForm = () => {
       {loadingVerify && <Loader size="sm" label="Verifying..." />}
 
       <div className="flex gap-2">
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={() => { setStep(1); setGrid(null); resetSelections(); setStatusMessage(null); }}
-          disabled={loadingVerify}
-        >
-          Change user
-        </Button>
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={() => setGridKey((k) => k + 1)}
-          disabled={loadingVerify || !!sessionPassword}
-        >
-          Reset selection
-        </Button>
+        <Button variant="secondary" className="flex-1" onClick={() => { setStep(1); setGrid(null); resetSelections(); setStatusMessage(null); }} disabled={loadingVerify}>Change user</Button>
+        <Button variant="secondary" className="flex-1" onClick={() => setGridKey((k) => k + 1)} disabled={loadingVerify || !!sessionPassword}>Reset selection</Button>
       </div>
     </div>
   );

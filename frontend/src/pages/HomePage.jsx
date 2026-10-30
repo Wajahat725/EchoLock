@@ -35,9 +35,7 @@ const HomePage = () => (
           Security with <span className="text-gradient">EchoLock</span>
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
-          Register eight secret characters, then authenticate by clicking their positions on a
-          fresh random grid every time. Stronger than static passwords, designed for modern session-based
-          access.
+          Register eight secret characters, then authenticate by clicking their positions on a fresh random grid every time. Stronger than static passwords, designed for modern session-based access.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link to={ROUTES.REGISTER}>
@@ -75,11 +73,10 @@ const HomePage = () => (
         </li>
         <li className="flex items-start gap-3">
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-800">3</span>
-          <span>Click your eight secrets in order — those dynamic coordinates form your one-time session password.</span>
+          <span>Click your eight secrets in order - those dynamic coordinates form your one-time session password.</span>
         </li>
       </ol>
     </section>
   </div>
 );
-
 export default HomePage;

@@ -1,30 +1,18 @@
-# backend/main.py
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import psycopg
 import json
-import sys
 import os
 from dotenv import load_dotenv
 load_dotenv()
 
-# ---------------------------------------------------------
-# Security Core / AI Module Import
-# ---------------------------------------------------------
-PARENT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if PARENT_DIR not in sys.path:
-    sys.path.append(PARENT_DIR)
+from auth.encryption import encrypt_secret, decrypt_secret
+from auth.grid_generator import generate_grid
+from auth.otp_generator import generate_session_password
+from auth.lockout import check_lockout, record_failed_attempt, reset_attempts
+from predictor import check_leakage
 
-from security_core.encryption import encrypt_secret, decrypt_secret
-from security_core.grid_generator import generate_grid
-from security_core.otp_generator import generate_session_password
-from security_core.lockout import check_lockout, record_failed_attempt, reset_attempts
-from ai_module.predictor import check_leakage
-
-# ---------------------------------------------------------
-# FastAPI App
-# ---------------------------------------------------------
 app = FastAPI(title="EchoLock API")
 
 app.add_middleware(
@@ -35,9 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------------------------------------------------------
-# Database Config - Neon Cloud PostgreSQL
-# ---------------------------------------------------------
 DB_CONFIG = {
     "host": "ep-wispy-frog-b3c2j4wm-pooler.c-4.ap-southeast-1.aws.neon.tech",
     "dbname": "echolock_db",
@@ -56,14 +41,8 @@ def get_db():
         raise RuntimeError("NEON_DB_PASSWORD environment variable is not set")
     return psycopg.connect(**DB_CONFIG, password=password)
 
-# ---------------------------------------------------------
-# Secret length limits - Strictly 8 Characters
-# ---------------------------------------------------------
 REQUIRED_SECRET_CHARS = 8
 
-# ---------------------------------------------------------
-# Request Models
-# ---------------------------------------------------------
 class RegisterRequest(BaseModel):
     username: str
     secret_chars: str
@@ -73,15 +52,10 @@ class VerifyRequest(BaseModel):
     session_id: int
     positions: list
 
-# ---------------------------------------------------------
-# Routes
-# ---------------------------------------------------------
-
 @app.get("/")
 def root():
     return {"message": "EchoLock API is running!"}
 
-# ---------- Dashboard ----------
 @app.get("/dashboard/history")
 def dashboard_history(username: str):
     conn = get_db()
@@ -192,7 +166,6 @@ def dashboard_leakage(username: str):
         "attempts_analyzed": len(recent_sessions),
     }
 
-# ---------- 1. Register ----------
 @app.post("/register")
 def register(req: RegisterRequest):
     parts = [p.strip() for p in req.secret_chars.split(",") if p.strip()]
@@ -230,7 +203,6 @@ def register(req: RegisterRequest):
         cur.close()
         conn.close()
 
-# ---------- 2. Login Start ----------
 @app.get("/login/start")
 def login_start(username: str):
     conn = get_db()
@@ -277,7 +249,6 @@ def login_start(username: str):
         cur.close()
         conn.close()
 
-# ---------- 3. Login Verify ----------
 @app.post("/login/verify")
 def login_verify(req: VerifyRequest):
     conn = get_db()

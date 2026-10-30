@@ -19,6 +19,7 @@ const RegisterForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setApiError('');
+
     const usernameError = validateUsername(username);
     const { chars, error: secretError } = parseSecretChars(secretChars);
     setErrors({ username: usernameError, secretChars: secretError });
@@ -41,31 +42,12 @@ const RegisterForm = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {apiError && <Alert variant="error">{apiError}</Alert>}
-      <Input
-        label="Username"
-        name="username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-        placeholder="Choose a username"
-        error={errors.username}
-      />
-      <Input
-        label="Secret characters"
-        name="secretChars"
-        value={secretChars}
-        onChange={(e) => setSecretChars(e.target.value)}
-        placeholder="A, B, C, D, E, F, G, H"
-        error={errors.secretChars}
-      />
-      <p className="-mt-2 text-xs text-slate-500 leading-relaxed">
-        Register 8 secret characters. At login you will click their positions on a dynamic grid.
-      </p>
-      <Button type="submit" className="w-full" loading={loading}>
-        Create account
-      </Button>
+      <Input label="Username" name="username" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Choose a username" error={errors.username} />
+      <Input label="Secret characters" name="secretChars" value={secretChars} onChange={(e) => setSecretChars(e.target.value)} placeholder="A, B, C, D, E, F, G, H" error={errors.secretChars} />
+      <p className="-mt-2 text-xs text-slate-500 leading-relaxed">Register 8 secret characters. At login you will click their positions on a dynamic grid.</p>
+      <Button type="submit" className="w-full" loading={loading}>Create account</Button>
     </form>
   );
 };
 
 export default RegisterForm;
-

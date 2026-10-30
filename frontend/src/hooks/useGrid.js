@@ -1,4 +1,3 @@
-// frontend/src/hooks/useGrid.js
 import { useCallback, useState } from 'react';
 import { REQUIRED_SECRET_CHARS } from '../utils/constants';
 
@@ -10,7 +9,6 @@ export const useGrid = (maxSelections = REQUIRED_SECRET_CHARS) => {
       setSelections((prev) => {
         const already = prev.some((s) => s.row === row && s.col === col);
         if (already || prev.length >= maxSelections) return prev;
-
         return [
           ...prev,
           {

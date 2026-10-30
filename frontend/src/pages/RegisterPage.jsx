@@ -16,5 +16,4 @@ const RegisterPage = () => (
     </Card>
   </div>
 );
-
 export default RegisterPage;

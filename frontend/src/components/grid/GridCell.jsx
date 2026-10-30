@@ -16,6 +16,4 @@ const GridCell = ({ char, row, col, isSelected, order, onClick }) => (
     )}
   </button>
 );
-
 export default GridCell;
-

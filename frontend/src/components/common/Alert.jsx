@@ -5,14 +5,10 @@ const Alert = ({ variant = 'info', children, className = '' }) => {
     warning: 'border-amber-200 bg-amber-50/80 text-amber-900',
     error: 'border-rose-200 bg-rose-50/80 text-rose-900',
   };
-
   return (
     <div className={`rounded-xl border p-3.5 text-sm font-medium ${styles[variant]} ${className}`} role="alert">
       {children}
     </div>
   );
 };
-
 export default Alert;
-
-
