@@ -3,3 +3,7 @@ uvicorn[standard]
 psycopg[binary]
 cryptography
 pydantic
+python-dotenv
+joblib
+numpy
+scikit-learn==1.6.1

@@ -7,6 +7,25 @@ import { useAuth } from '../hooks/useAuth';
 import { getLeakageReport, getLoginHistory } from '../services/sessionService';
 import { ROUTES } from '../utils/constants';
 
+// Date formatting function with Pakistan Timezone
+const formatDate = (dateString) => {
+  if (!dateString) return '—';
+  const date = new Date(dateString);
+  
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+    timeZone: 'Asia/Karachi' // Pakistan Standard Time
+  }).toLowerCase();
+
+  return `${day}/${month}/${year}, ${time}`;
+};
+
 const DashboardPage = () => {
   const { user, isAuthenticated } = useAuth();
   const [history, setHistory] = useState([]);
@@ -81,7 +100,9 @@ const DashboardPage = () => {
                 <tbody className="divide-y divide-slate-100">
                   {history.map((row, i) => (
                     <tr key={row.id ?? i} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-2.5 pr-4 text-slate-700 font-medium">{row.timestamp || row.created_at || '—'}</td>
+                      <td className="py-2.5 pr-4 text-slate-700 font-medium">
+                        {formatDate(row.timestamp || row.created_at)}
+                      </td>
                       <td className="py-2.5 pr-4">
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
                           row.success || row.status === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'

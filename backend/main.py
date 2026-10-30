@@ -1,9 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from cryptography.fernet import InvalidToken
 import psycopg
 import json
 import os
+from datetime import timezone
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -73,7 +75,7 @@ def dashboard_history(username: str):
         history = [
             {
                 "id": attempt_id,
-                "timestamp": created_at.isoformat() if created_at else None,
+                "timestamp": created_at.replace(tzinfo=timezone.utc).isoformat() if created_at else None,
                 "success": success,
             }
             for attempt_id, created_at, success in cur.fetchall()
@@ -82,7 +84,6 @@ def dashboard_history(username: str):
     finally:
         cur.close()
         conn.close()
-
 
 @app.get("/dashboard/leakage")
 def dashboard_leakage(username: str):
@@ -227,7 +228,13 @@ def login_start(username: str):
 
         cur.execute("SELECT encrypted_secret FROM users WHERE id = %s", (user_id,))
         encrypted_secret = cur.fetchone()[0]
-        secret_chars = decrypt_secret(encrypted_secret).split(",")
+        try:
+            secret_chars = decrypt_secret(encrypted_secret).split(",")
+        except InvalidToken as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="Stored secret cannot be decrypted with the current key. Restore the original backend/auth/secret.key or reset and re-register this account.",
+            ) from exc
 
         grid = generate_grid(5, required_chars=secret_chars)
 
@@ -269,8 +276,11 @@ def login_verify(req: VerifyRequest):
 
         try:
             secret_chars = decrypt_secret(encrypted_secret).split(",")
-        except Exception:
-            raise HTTPException(status_code=500, detail="Failed to decrypt secret")
+        except InvalidToken as exc:
+            raise HTTPException(
+                status_code=500,
+                detail="Stored secret cannot be decrypted with the current key. Restore the original backend/auth/secret.key or reset and re-register this account.",
+            ) from exc
 
         cur.execute(
             "SELECT grid_data FROM sessions WHERE id = %s AND user_id = %s",
