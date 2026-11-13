@@ -75,7 +75,7 @@ const LoginForm = () => {
       }
 
       setStatusMessage({ variant: 'error', text: data.message || 'Authentication failed.' });
-      toast.error('Invalid selection — try again');
+      toast.error('Invalid selection-try again');
       setGridKey((k) => k + 1);
     } catch (err) {
       const msg = err.message || 'Verification failed';
@@ -109,7 +109,7 @@ const LoginForm = () => {
       setSessionId(data.session_id);
       setStep(2);
       setGridKey((k) => k + 1);
-      toast.success('Grid loaded — select your secret pattern');
+      toast.success('Grid loaded-select your secret pattern');
     } catch (err) {
       const msg = err.message || 'Could not start login session';
       toast.error(msg);
