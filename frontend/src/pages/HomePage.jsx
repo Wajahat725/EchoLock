@@ -6,7 +6,7 @@ import { ROUTES } from '../utils/constants';
 const features = [
   {
     title: 'Grid-based login',
-    text: 'Each session shows a unique 5×5 character grid. Your password is where you click — not what you type.',
+    text: 'Each session shows a unique 5×5 character grid. Your password is where you click - not what you type.',
   },
   {
     title: 'One-time session keys',
