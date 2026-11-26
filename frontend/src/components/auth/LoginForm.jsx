@@ -11,7 +11,7 @@ import LockoutBanner from '../security/LockoutBanner';
 import { useGrid } from '../../hooks/useGrid';
 import { useAuth } from '../../hooks/useAuth';
 import { startLogin, verifyLogin } from '../../services/authService';
-import { ROUTES } from '../../utils/constants';
+import { ROUTES, TOTAL_CLICKS } from '../../utils/constants';
 import { validateUsername } from '../../utils/validators';
 
 const GridSkeleton = () => (
@@ -37,7 +37,7 @@ const LoginForm = () => {
   const [sessionPassword, setSessionPassword] = useState('');
   const [gridKey, setGridKey] = useState(0);
 
-  const { selections, handleCellClick, resetSelections, isComplete } = useGrid();
+  const { selections, handleCellClick, resetSelections, isComplete } = useGrid(TOTAL_CLICKS);
 
   useEffect(() => {
     resetSelections();

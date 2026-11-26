@@ -45,6 +45,29 @@ def get_db():
 
 REQUIRED_SECRET_CHARS = 8
 
+# Shoulder-surfing / screen-recording countermeasure: the user clicks their
+# 8 real secret characters IN ORDER, but mixed in with DECOY_CLICKS extra
+# clicks anywhere else on the grid. An observer sees TOTAL_CLICKS clicks
+# and cannot tell which ones are real without already knowing the secret.
+DECOY_CLICKS = 4
+TOTAL_CLICKS = REQUIRED_SECRET_CHARS + DECOY_CLICKS
+
+
+def is_subsequence(secret_chars, clicked_chars):
+    """
+    True if secret_chars appears inside clicked_chars in the same
+    relative order, not necessarily contiguous (decoy clicks may sit
+    before, between, or after the real ones). Since every secret
+    character is unique, greedy left-to-right matching is sufficient
+    to decide this correctly.
+    """
+    idx = 0
+    for ch in clicked_chars:
+        if idx < len(secret_chars) and ch == secret_chars[idx]:
+            idx += 1
+    return idx == len(secret_chars)
+
+
 class RegisterRequest(BaseModel):
     username: str
     secret_chars: str
@@ -117,7 +140,10 @@ def dashboard_leakage(username: str):
     for (positions,) in recent_sessions:
         if isinstance(positions, str):
             positions = json.loads(positions)
-        if not isinstance(positions, list) or len(positions) != REQUIRED_SECRET_CHARS:
+        # A successful session now logs TOTAL_CLICKS positions (8 secret +
+        # 4 decoy), not just REQUIRED_SECRET_CHARS, so the length check
+        # here has to match that.
+        if not isinstance(positions, list) or len(positions) != TOTAL_CLICKS:
             continue
 
         normalized_positions = []
@@ -249,7 +275,9 @@ def login_start(username: str):
             "grid": grid,
             "session_id": session_id,
             "secret_length": len(secret_chars),
-            "message": "Grid generated. Click your secret characters in order."
+            "decoy_clicks": DECOY_CLICKS,
+            "total_clicks": TOTAL_CLICKS,
+            "message": "Grid generated. Click your secret characters in order, plus a few decoy clicks."
         }
 
     finally:
@@ -305,14 +333,20 @@ def login_verify(req: VerifyRequest):
                     raise HTTPException(status_code=400, detail="Invalid position format")
 
             clicked_chars = [grid[r][c] for r, c in positions]
-            
-            if len(clicked_chars) != len(secret_chars):
-                raise HTTPException(status_code=400, detail=f"Expected {len(secret_chars)} clicks, got {len(clicked_chars)}")
+
+            # Now expects REQUIRED_SECRET_CHARS real clicks + DECOY_CLICKS
+            # decoy clicks, in any mix, as long as the secret still
+            # appears in order among them.
+            if len(clicked_chars) != TOTAL_CLICKS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Expected {TOTAL_CLICKS} clicks ({REQUIRED_SECRET_CHARS} secret + {DECOY_CLICKS} decoy), got {len(clicked_chars)}"
+                )
 
         except (IndexError, TypeError):
             raise HTTPException(status_code=400, detail="Invalid positions")
 
-        if clicked_chars == secret_chars:
+        if is_subsequence(secret_chars, clicked_chars):
             reset_attempts(cur, user_id)
             session_pass = generate_session_password(positions, grid, user_id)
 
